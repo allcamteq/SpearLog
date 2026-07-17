@@ -96,7 +96,7 @@ export default async function Insights2Page({ searchParams }: { searchParams: Pr
         basePath="/insights2"
       />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatTile label="Total sessions" value={String(stats.totalSessions)} />
         <StatTile label="Total catches" value={String(stats.totalCatches)} />
         <StatTile label="Avg rating" value={stats.avgRating != null ? stats.avgRating.toFixed(1) : "—"} />

@@ -310,8 +310,8 @@ export function SessionFilters({
       )}
 
       <form onSubmit={applyFilters} className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-end gap-3">
-          {quickFields.map(renderField)}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="grid grid-cols-2 gap-3 sm:contents">{quickFields.map(renderField)}</div>
           <div className="flex gap-2">
             <button type="submit" className={button("primary", "text-xs")}>
               Apply
