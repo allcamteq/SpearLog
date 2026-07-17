@@ -34,7 +34,7 @@ export async function saveOptionLocation(
     .where(and(eq(optionValues.id, id), eq(optionValues.userId, userId)));
 }
 
-/** Looks up a saved geocode for a location option by its value, so tide/current lookups can reuse a verified result instead of re-querying Nominatim. */
+/** Looks up a saved geocode for a location option by its value, so tide/current lookups can reuse a verified result instead of re-querying the geocoder. */
 export async function getSavedLocationGeocode(
   userId: number,
   value: string

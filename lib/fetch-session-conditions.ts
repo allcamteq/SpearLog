@@ -33,7 +33,7 @@ export async function fetchSessionConditions(
   const { location, country, date, startTime } = params;
 
   // Prefer a verified geocode saved via "Check location" in Maintenance — it's
-  // more trustworthy than a fresh Nominatim lookup, which can mismatch on
+  // more trustworthy than a fresh geocoder lookup, which can mismatch on
   // ambiguous place names.
   const saved = await getSavedLocationGeocode(userId, location);
   const geocoded = saved ?? (await geocodeLocation(location, country ?? undefined));

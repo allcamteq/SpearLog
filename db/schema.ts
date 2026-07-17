@@ -32,7 +32,7 @@ export const optionValues = sqliteTable(
     category: text("category", { enum: OPTION_CATEGORIES }).notNull(),
     value: text("value").notNull(),
     // Populated by "Check location" (category === "location" only) so tide/current
-    // lookups can reuse a verified geocode instead of re-querying Nominatim each time.
+    // lookups can reuse a verified geocode instead of re-querying the geocoder each time.
     lat: real("lat"),
     lng: real("lng"),
     resolvedAddress: text("resolved_address"),

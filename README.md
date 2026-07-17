@@ -53,7 +53,7 @@ The dashboard (`/`) filters sessions by location, country, rating range, date ra
    ```bash
    TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... npm run db:push
    ```
-4. In the Vercel project settings, add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` as environment variables (Production, and Preview if you want preview deploys to share the data).
+4. In the Vercel project settings, add `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTH_SECRET`, and `LOCATIONIQ_API_KEY` as environment variables (Production, and Preview if you want preview deploys to share the data). `LOCATIONIQ_API_KEY` is required in production — geocoding falls back to the free Nominatim endpoint locally (fine from a home IP), but Nominatim blocks cloud/datacenter IPs, so it fails silently on Vercel without this set. Sign up for a free key at [locationiq.com](https://locationiq.com).
 5. Deploy (via `vercel --prod` or by connecting the git repo).
 
 For local dev against the same hosted data instead of the local file, copy `.env.example` to `.env.local` and fill in the same two values.
