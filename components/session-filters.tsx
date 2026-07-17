@@ -175,7 +175,7 @@ export function SessionFilters({
         );
       case "dateFrom":
         return (
-          <div key={field}>
+          <div key={field} className="col-span-2 sm:col-auto">
             <label className={labelClass}>Date from</label>
             <input
               type="date"
@@ -187,7 +187,7 @@ export function SessionFilters({
         );
       case "dateTo":
         return (
-          <div key={field}>
+          <div key={field} className="col-span-2 sm:col-auto">
             <label className={labelClass}>Date to</label>
             <input
               type="date"
