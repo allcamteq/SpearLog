@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { listSessions } from "@/db/queries/sessions";
+import { listSessions, hasAnySessions } from "@/db/queries/sessions";
 import { listAllOptionValues } from "@/db/queries/options";
 import { listMarks } from "@/db/queries/marks";
 import { parseSessionFilters } from "@/lib/filters";
@@ -8,6 +8,7 @@ import { SessionFilters } from "@/components/session-filters";
 import { SessionTable } from "@/components/session-table";
 import { SessionDataActionsMenu } from "@/components/session-data-actions-menu";
 import { FetchMissingConditionsButton } from "@/components/fetch-missing-conditions-button";
+import { GettingStartedChecklist } from "@/components/getting-started-checklist";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -26,10 +27,11 @@ export default async function DashboardPage({
   }
 
   const filters = parseSessionFilters(usp);
-  const [sessions, options, marks] = await Promise.all([
+  const [sessions, options, marks, hasSessions] = await Promise.all([
     listSessions(userId, filters),
     listAllOptionValues(userId),
     listMarks(userId),
+    hasAnySessions(userId),
   ]);
 
   return (
@@ -41,6 +43,7 @@ export default async function DashboardPage({
           <SessionDataActionsMenu />
         </div>
       </div>
+      {!hasSessions && <GettingStartedChecklist />}
       <SessionFilters
         locationOptions={options.location}
         countryOptions={options.country}

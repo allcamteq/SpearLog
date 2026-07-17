@@ -145,6 +145,12 @@ export async function listSessions(
   }));
 }
 
+/** Whether the account has any sessions at all, ignoring filters — used to decide whether to show the new-account "Getting started" checklist (which shouldn't reappear just because a filter matches zero results). */
+export async function hasAnySessions(userId: number): Promise<boolean> {
+  const [row] = await db.select({ id: sessions.id }).from(sessions).where(eq(sessions.userId, userId)).limit(1);
+  return !!row;
+}
+
 export async function getSessionById(userId: number, id: number): Promise<SessionWithCatches | undefined> {
   const [session] = await db
     .select()
