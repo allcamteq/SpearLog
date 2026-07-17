@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f8fa;
+  --foreground: #0f2733;
+  --surface: #ffffff;
+  --surface-border: rgba(15, 39, 51, 0.1);
+  --muted: #5b7480;
+
+  --accent: #0e7490;
+  --accent-hover: #0b5d74;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e0f2f6;
+  --accent-soft-foreground: #0b5d74;
+
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
+  --warning-foreground: #b45309;
+
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --success-foreground: #15803d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-border: var(--surface-border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #071019;
+    --foreground: #e7eff2;
+    --surface: #16303f;
+    --surface-border: rgba(231, 239, 242, 0.14);
+    --muted: #93a8b2;
+
+    --accent: #22b8cf;
+    --accent-hover: #3fc9df;
+    --accent-foreground: #041418;
+    --accent-soft: rgba(34, 184, 207, 0.14);
+    --accent-soft-foreground: #67d7e8;
+
+    --danger: #f87171;
+    --danger-hover: #fca5a5;
+    --danger-soft: rgba(248, 113, 113, 0.12);
+
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.14);
+    --warning-foreground: #fbbf24;
+
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.14);
+    --success-foreground: #4ade80;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}

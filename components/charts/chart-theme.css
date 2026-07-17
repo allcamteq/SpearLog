@@ -1,0 +1,17 @@
+.viz-root {
+  --surface-1: #ffffff;
+  --text-secondary: #3d4f57;
+  --text-muted: #5b7480;
+  --gridline: #e3ecef;
+  --series-1: #0e7490;
+}
+
+@media (prefers-color-scheme: dark) {
+  .viz-root {
+    --surface-1: #0f1f29;
+    --text-secondary: #c7d3d7;
+    --text-muted: #93a8b2;
+    --gridline: #223038;
+    --series-1: #22b8cf;
+  }
+}
