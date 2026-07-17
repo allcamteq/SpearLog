@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { cardClass, button } from "@/lib/ui";
+import { SessionImportButton } from "@/components/session-import-button";
 
 const DISMISS_KEY = "spearlog-getting-started-dismissed";
 
@@ -35,12 +36,14 @@ type Step = {
   description: string;
   href?: string;
   cta?: string;
+  action?: "import-sessions";
 };
 
 const STEPS: Step[] = [
   {
     title: "Import your sessions",
-    description: 'Bring in your existing dive log from a spreadsheet — use "Data actions → Import CSV" above.',
+    description: "Bring in your existing dive log from a spreadsheet.",
+    action: "import-sessions",
   },
   {
     title: "Fetch missing tide & current data",
@@ -50,8 +53,8 @@ const STEPS: Step[] = [
   {
     title: "Geotag your locations",
     description: "Resolve GPS coordinates and place names for your marks in bulk.",
-    href: "/marks",
-    cta: "Go to Marks",
+    href: "/maintenance",
+    cta: "Go to Maintenance",
   },
   {
     title: "Import your marks",
@@ -89,6 +92,7 @@ export function GettingStartedChecklist() {
               <p className="text-sm font-medium">{step.title}</p>
               <p className="mt-0.5 text-xs text-muted">{step.description}</p>
             </div>
+            {step.action === "import-sessions" && <SessionImportButton />}
             {step.href && step.cta && (
               <Link href={step.href} className={button("secondary", "shrink-0 text-xs")}>
                 {step.cta}
