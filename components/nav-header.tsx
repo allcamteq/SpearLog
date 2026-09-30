@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/sessions/new", label: "New session" },
   { href: "/", label: "Logbook" },
   { href: "/insights2", label: "Insights" },
+  { href: "/trip-planning", label: "Trip planning" },
   { href: "/marks", label: "Marks" },
   { href: "/maintenance", label: "Maintenance" },
 ];

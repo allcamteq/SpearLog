@@ -119,3 +119,88 @@ export async function getMarineConditions(lat: number, lng: number, timeISO: str
     pressureHpa: pickSourceValue(hour.pressure),
   };
 }
+
+export type ForecastHour = {
+  time: string; // ISO, UTC
+  swellHeightM: number | null;
+  swellPeriodS: number | null;
+  swellDirectionDeg: number | null;
+  waveHeightM: number | null;
+  wavePeriodS: number | null;
+  windSpeedKt: number | null;
+  windDirectionDeg: number | null;
+  gustKt: number | null;
+  currentSpeedKt: number | null;
+  currentDirectionDeg: number | null;
+  waterTempC: number | null;
+  airTempC: number | null;
+  precipitationMm: number | null;
+  cloudCoverPct: number | null;
+};
+
+const FORECAST_PARAMS = [
+  "swellHeight",
+  "swellPeriod",
+  "swellDirection",
+  "waveHeight",
+  "wavePeriod",
+  "windSpeed",
+  "windDirection",
+  "gust",
+  "currentSpeed",
+  "currentDirection",
+  "waterTemperature",
+  "airTemperature",
+  "precipitation",
+  "cloudCover",
+].join(",");
+
+/**
+ * Hourly marine forecast over an arbitrary window, in one request. Trip
+ * planning asks for the target day plus the three days before it, so the same
+ * call covers both the forecast and the recent-swell history that decides how
+ * far the water has recovered from the last blow.
+ */
+export async function getMarineForecast(
+  lat: number,
+  lng: number,
+  startISO: string,
+  endISO: string
+): Promise<ForecastHour[]> {
+  const json = (await stormglassFetch("/weather/point", {
+    lat: String(lat),
+    lng: String(lng),
+    params: FORECAST_PARAMS,
+    start: startISO,
+    end: endISO,
+  })) as { hours?: (Record<string, unknown> & { time: string })[] };
+
+  const hours = json.hours ?? [];
+  if (hours.length === 0) {
+    throw new StormglassError("No marine forecast available for this location", "no_data");
+  }
+
+  return hours.map((hour) => {
+    const windSpeedMs = pickSourceValue(hour.windSpeed);
+    const gustMs = pickSourceValue(hour.gust);
+    const currentSpeedMs = pickSourceValue(hour.currentSpeed);
+
+    return {
+      time: hour.time,
+      swellHeightM: pickSourceValue(hour.swellHeight),
+      swellPeriodS: pickSourceValue(hour.swellPeriod),
+      swellDirectionDeg: pickSourceValue(hour.swellDirection),
+      waveHeightM: pickSourceValue(hour.waveHeight),
+      wavePeriodS: pickSourceValue(hour.wavePeriod),
+      windSpeedKt: windSpeedMs != null ? windSpeedMs * MS_TO_KT : null,
+      windDirectionDeg: pickSourceValue(hour.windDirection),
+      gustKt: gustMs != null ? gustMs * MS_TO_KT : null,
+      currentSpeedKt: currentSpeedMs != null ? currentSpeedMs * MS_TO_KT : null,
+      currentDirectionDeg: pickSourceValue(hour.currentDirection),
+      waterTempC: pickSourceValue(hour.waterTemperature),
+      airTempC: pickSourceValue(hour.airTemperature),
+      precipitationMm: pickSourceValue(hour.precipitation),
+      cloudCoverPct: pickSourceValue(hour.cloudCover),
+    };
+  });
+}
