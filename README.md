@@ -53,12 +53,23 @@ The dashboard (`/`) filters sessions by location, country, rating range, date ra
    ```bash
    TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... npm run db:push
    ```
-4. In the Vercel project settings, add `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUTH_SECRET`, and `LOCATIONIQ_API_KEY` as environment variables (Production, and Preview if you want preview deploys to share the data). `LOCATIONIQ_API_KEY` is required in production — geocoding falls back to the free Nominatim endpoint locally (fine from a home IP), but Nominatim blocks cloud/datacenter IPs, so it fails silently on Vercel without this set. Sign up for a free key at [locationiq.com](https://locationiq.com).
+4. In the Vercel project settings, add the following environment variables (Production, and Preview if you want preview deploys to share the data):
+   - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — from step 2.
+   - `AUTH_SECRET` — signs/encrypts session JWTs. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+   - `LOCATIONIQ_API_KEY` — required in production. Geocoding falls back to the free Nominatim endpoint locally (fine from a home IP), but Nominatim blocks cloud/datacenter IPs, so it fails silently on Vercel without this set. Sign up for a free key at [locationiq.com](https://locationiq.com).
+   - `STORMGLASS_API_KEY` — powers the tide/current "Fetch conditions" feature. Without it, those lookups fail. Sign up at [stormglass.io](https://stormglass.io) (free tier ~50 requests/day).
+   - `BLOB_READ_WRITE_TOKEN` — powers session photo uploads. Create a Blob store on the Vercel project (Storage tab → Create Database → Blob); Vercel injects this automatically once a store is connected, so you usually don't need to set it by hand.
 5. Deploy (via `vercel --prod` or by connecting the git repo).
 
 For local dev against the same hosted data instead of the local file, copy `.env.example` to `.env.local` and fill in the same two values.
 
 ## Schema changes
 
-- Pre-launch / iterating on the schema: `npm run db:push` (fast, no migration files).
-- Once there's real data worth preserving: `npm run db:generate` (writes a migration under `drizzle/`) then `npm run db:migrate` to apply it — do this against both local and Turso.
+Now that there's a real baseline (`drizzle/`, committed to the repo), schema changes go through migrations rather than `db:push`:
+
+1. Edit `db/schema.ts`.
+2. `npm run db:generate` — writes a new migration file under `drizzle/` and updates `drizzle/meta/`.
+3. Review the generated SQL.
+4. `npm run db:migrate` locally (against `./local.db`) to verify it applies cleanly.
+5. Run `npm run db:migrate` again with `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` set to the production values, before or right after deploying the code that depends on the new schema (this is a manual step — Preview deployments share the same Turso database as production, so migrations are intentionally not run automatically as part of the build).
+6. Commit the schema change and the new `drizzle/*.sql` + `drizzle/meta/*` files together.
