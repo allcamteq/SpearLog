@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getUserId } from "@/lib/auth-helpers";
 import { getUserById } from "@/db/queries/users";
 import { formatDateDisplay } from "@/lib/date";
@@ -70,12 +71,14 @@ export default async function AccountPage() {
         <h2 className="mb-3 text-sm font-semibold">Policies</h2>
         <ul className="flex flex-col gap-2 text-sm">
           <li>
-            <span className="text-foreground">Privacy policy</span>
-            <span className="ml-2 text-xs text-muted">(placeholder — not yet written)</span>
+            <Link href="/privacy" className="text-accent hover:underline">
+              Privacy policy
+            </Link>
           </li>
           <li>
-            <span className="text-foreground">Terms of service</span>
-            <span className="ml-2 text-xs text-muted">(placeholder — not yet written)</span>
+            <Link href="/terms" className="text-accent hover:underline">
+              Terms of service
+            </Link>
           </li>
         </ul>
       </section>
