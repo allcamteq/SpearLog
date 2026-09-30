@@ -3,6 +3,7 @@ import { getMarkById, setMarkLocation, setMarkGps } from "@/db/queries/marks";
 import { addOption } from "@/db/queries/options";
 import { reverseGeocode, geocodeLocation } from "@/lib/geocode";
 import { getUserId } from "@/lib/auth-helpers";
+import { checkProviderQuota } from "@/lib/rate-limit";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -11,6 +12,10 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function POST(_request: NextRequest, { params }: RouteParams) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkProviderQuota(userId, "locationiq"))) {
+    return NextResponse.json({ error: "Daily geocoding limit reached. Try again tomorrow." }, { status: 429 });
+  }
 
   const { id } = await params;
   const mark = await getMarkById(userId, Number(id));

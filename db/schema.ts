@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const TIDE_TYPES = ["High", "High to Low", "Low", "Low to High"] as const;
@@ -139,6 +139,33 @@ export const sessionPhotos = sqliteTable("session_photos", {
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+// Sliding-window hit log for abuse checks (signup/login) — see lib/rate-limit.ts.
+export const rateLimitHits = sqliteTable(
+  "rate_limit_hits",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    bucket: text("bucket").notNull(), // e.g. "signup:ip:1.2.3.4", "login:email:foo@bar.com"
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [index("rate_limit_hits_bucket_idx").on(table.bucket, table.createdAt)]
+);
+
+// Daily per-user counters for metered third-party providers (LocationIQ, Stormglass)
+// so one user can't exhaust the app-wide free-tier quota — see lib/rate-limit.ts.
+export const providerUsage = sqliteTable(
+  "provider_usage",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    provider: text("provider", { enum: ["locationiq", "stormglass"] }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    day: text("day").notNull(), // "YYYY-MM-DD", UTC
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [uniqueIndex("provider_usage_provider_user_day_idx").on(table.provider, table.userId, table.day)]
+);
 
 export type SessionRow = typeof sessions.$inferSelect;
 export type NewSessionRow = typeof sessions.$inferInsert;

@@ -3,6 +3,7 @@ import { listMarksMissingLocation, listMarksMissingGps, setMarkLocation, setMark
 import { addOption } from "@/db/queries/options";
 import { reverseGeocode, geocodeLocation } from "@/lib/geocode";
 import { getUserId } from "@/lib/auth-helpers";
+import { checkProviderQuota } from "@/lib/rate-limit";
 
 // Space out lookups when there are several marks to resolve in one go — stays
 // under both providers' free-tier caps (Nominatim ~1/second, LocationIQ 2/second).
@@ -34,6 +35,12 @@ export async function POST() {
 
       for (const [index, { mark, direction }] of candidates.entries()) {
         if (index > 0) await new Promise((resolve) => setTimeout(resolve, GEOCODE_DELAY_MS));
+
+        if (!(await checkProviderQuota(userId, "locationiq"))) {
+          errors.push("Daily geocoding limit reached — remaining marks were skipped. Try again tomorrow.");
+          send({ type: "progress", completed: candidates.length, total: candidates.length });
+          break;
+        }
 
         if (direction === "location") {
           if (mark.lat != null && mark.lng != null) {

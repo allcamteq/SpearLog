@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth-helpers";
 import { geocodeLocation } from "@/lib/geocode";
+import { checkProviderQuota } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkProviderQuota(userId, "locationiq"))) {
+    return NextResponse.json({ error: "Daily geocoding limit reached. Try again tomorrow." }, { status: 429 });
+  }
 
   const location = request.nextUrl.searchParams.get("location");
   const country = request.nextUrl.searchParams.get("country");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId } from "@/lib/auth-helpers";
 import { fetchSessionConditions, StormglassError } from "@/lib/fetch-session-conditions";
+import { checkProviderQuota } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   location: z.string().min(1),
@@ -13,6 +14,10 @@ const bodySchema = z.object({
 export async function POST(request: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!(await checkProviderQuota(userId, "stormglass"))) {
+    return NextResponse.json({ error: "Daily conditions-lookup limit reached. Try again tomorrow." }, { status: 429 });
+  }
 
   const body = await request.json();
   const parsed = bodySchema.safeParse(body);

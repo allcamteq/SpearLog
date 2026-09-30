@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
+import { ipAddress } from "@vercel/functions";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { signupSchema } from "@/lib/validation/auth";
+import { checkAndHit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const ip = ipAddress(request) ?? "unknown";
+  const allowed = await checkAndHit(`signup:ip:${ip}`, { windowMinutes: 60, limit: 5 });
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many accounts created from this address. Try again later." }, { status: 429 });
+  }
+
   const body = await request.json();
   const parsed = signupSchema.safeParse(body);
 

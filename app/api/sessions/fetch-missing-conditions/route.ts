@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { listSessionsMissingConditions, setSessionConditions } from "@/db/queries/sessions";
 import { fetchSessionConditions, StormglassError } from "@/lib/fetch-session-conditions";
 import { getUserId } from "@/lib/auth-helpers";
+import { checkProviderQuota } from "@/lib/rate-limit";
 
 // Streams newline-delimited JSON progress events so the client can render a live
 // progress bar — a full batch can take a while since each session is a Stormglass call.
@@ -22,6 +23,10 @@ export async function POST() {
 
       for (const [index, session] of candidates.entries()) {
         try {
+          if (!(await checkProviderQuota(userId, "stormglass"))) {
+            throw new StormglassError("Daily conditions-lookup limit reached. Try again tomorrow.", "quota_exceeded");
+          }
+
           const conditions = await fetchSessionConditions(userId, {
             location: session.location!,
             country: session.country,
