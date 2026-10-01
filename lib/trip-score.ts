@@ -20,7 +20,13 @@
  *
  * Everything here is pure: no I/O, no clock reads. lib/trip-conditions.ts
  * gathers the data and calls in.
+ *
+ * Type-only import: this module is reachable from the client bundle, and
+ * lib/log-evidence.ts pulls in the Drizzle schema. The evidence is computed
+ * server-side and handed in as plain data.
  */
+
+import type { LogEvidence } from "@/lib/log-evidence";
 
 export type Confidence = "High" | "Medium" | "Low";
 
@@ -76,6 +82,12 @@ export type ScoreInput = {
   estuaryInfluence: boolean;
   /** Days between today and the target date, for forecast-horizon confidence. */
   forecastHorizonDays: number;
+  /**
+   * What the user's own log at this location says about conditions like these.
+   * Null when there is no logbook to read — the rating is then the general
+   * model alone.
+   */
+  logEvidence?: LogEvidence | null;
 };
 
 export type FactorKey =
@@ -125,6 +137,19 @@ export type TripScore = {
   bestWindow: { startISO: string; endISO: string; score: number } | null;
   /** Ceilings that capped the rating, e.g. unworkable swell. Empty when none bit. */
   caps: string[];
+  /**
+   * How the user's own log at this location moved the rating. Null when there
+   * was no comparable session to learn from, so the absence reads as "nothing
+   * to compare" rather than "no effect".
+   */
+  logAdjustment: {
+    /** Points added to or taken off the forecast rating, after clamping. */
+    points: number;
+    /** Rating before the log was applied, for showing the working. */
+    forecastOnly: number;
+    matchCount: number;
+    summary: string;
+  } | null;
   factors: Factor[];
   hourScores: HourScore[];
   recommendations: Recommendation[];
@@ -381,6 +406,7 @@ export function scoreTrip(input: ScoreInput): TripScore {
     shoreFacingDeg,
     estuaryInfluence,
     forecastHorizonDays,
+    logEvidence,
   } = input;
 
   const dayStartMs = dayStart.getTime();
@@ -699,6 +725,27 @@ export function scoreTrip(input: ScoreInput): TripScore {
   const highConfidence = scored.filter((f) => f.confidence === "High").map((f) => f.score!);
   let score = highConfidence.length > 0 ? 0.8 * weightedMean + 0.2 * Math.min(...highConfidence) : weightedMean;
 
+  // ---- what this location's own log says ----------------------------------
+  // Everything above is the general model: the same numbers would come out
+  // anywhere on the coast. The log is the only thing here that knows this
+  // particular site, so when conditions like these have already been dived
+  // here it moves the rating towards how they actually went.
+  //
+  // It is applied before the ceilings below, deliberately. A run of good days
+  // in a southwesterly should lift a middling forecast, but it must not be able
+  // to lift an unworkable one — the physical caps still have the last word.
+  let logAdjustment: TripScore["logAdjustment"] = null;
+  if (logEvidence && logEvidence.matches.length > 0 && Math.abs(logEvidence.adjustment) >= 0.1) {
+    const forecastOnly = Math.round(clamp10(score) * 10) / 10;
+    score = clamp10(score + logEvidence.adjustment);
+    logAdjustment = {
+      points: logEvidence.adjustment,
+      forecastOnly,
+      matchCount: logEvidence.matches.length,
+      summary: logEvidence.summary,
+    };
+  }
+
   // ---- ceilings ----------------------------------------------------------
   // Good tide and good light cannot rescue an unworkable sea, so these cap the
   // rating rather than averaging into it.
@@ -771,6 +818,7 @@ export function scoreTrip(input: ScoreInput): TripScore {
     confidenceReason,
     bestWindow,
     caps,
+    logAdjustment,
     factors,
     hourScores,
     recommendations: buildRecommendations({
@@ -783,6 +831,7 @@ export function scoreTrip(input: ScoreInput): TripScore {
       estuaryInfluence,
       precip48h,
       workingDepthM,
+      logEvidence: logEvidence ?? null,
     }),
   };
 }
@@ -808,8 +857,9 @@ function buildRecommendations(args: {
   estuaryInfluence: boolean;
   precip48h: number;
   workingDepthM: number;
+  logEvidence: LogEvidence | null;
 }): Recommendation[] {
-  const { factors, caps, sampled, shoreFacingDeg, slackWindows, estuaryInfluence, precip48h } = args;
+  const { factors, caps, sampled, shoreFacingDeg, slackWindows, estuaryInfluence, precip48h, logEvidence } = args;
   const byKey = Object.fromEntries(factors.map((f) => [f.key, f])) as Record<FactorKey, Factor>;
   const out: Recommendation[] = [];
 
@@ -819,6 +869,29 @@ function buildRecommendations(args: {
       body: `${caps.join(" ")} A perfect tide on the third day of a southwesterly is still a wasted drive — pick a sheltered aspect or another day.`,
       confidence: "High",
     });
+  }
+
+  // Ranked immediately after the ceilings, and ahead of every general rule
+  // below, because it is the only evidence here drawn from this actual site.
+  if (logEvidence && logEvidence.matches.length > 0 && Math.abs(logEvidence.adjustment) >= 0.1) {
+    const closest = logEvidence.matches[0];
+    const when = closest.date ? `on ${closest.date}` : "in an undated session";
+    const outcome =
+      closest.rating != null ? `${closest.rating}/5` : `${closest.catchCount} landed`;
+
+    if (logEvidence.adjustment > 0) {
+      out.push({
+        title: "You have dived this well before",
+        body: `${logEvidence.summary} The closest was ${when}, which you rated ${outcome}. Conditions mean different things at different marks, so your own record here outranks every general rule below — dive your usual plan for these conditions.`,
+        confidence: logEvidence.strength >= 0.5 ? "High" : "Medium",
+      });
+    } else {
+      out.push({
+        title: "Conditions like these have not worked here",
+        body: `${logEvidence.summary} The closest was ${when}, which you rated ${outcome}. The general numbers above may look acceptable, but this mark has already told you otherwise — take the sheltered alternative, or change the window.`,
+        confidence: logEvidence.strength >= 0.5 ? "High" : "Medium",
+      });
+    }
   }
 
   // Swell direction drives which coast to pick, which is the highest-value

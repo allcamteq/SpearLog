@@ -2,9 +2,30 @@ import { find as findTimeZone } from "geo-tz/now";
 import { geocodeLocation } from "@/lib/geocode";
 import { getSavedLocationGeocode } from "@/db/queries/options";
 import { listSessions } from "@/db/queries/sessions";
-import { getTideExtremes, getMarineForecast, StormglassError, type TideExtreme } from "@/lib/stormglass";
-import { zonedTimeToUtc, formatTimeInZone } from "@/lib/tide-derivation";
+import {
+  getTideExtremes,
+  getMarineForecast,
+  StormglassError,
+  type ForecastHour,
+  type TideExtreme,
+} from "@/lib/stormglass";
+import {
+  zonedTimeToUtc,
+  formatTimeInZone,
+  deriveTideFields,
+  bucketCurrentLevel,
+  bucketSeaCondition,
+  bucketWindCondition,
+} from "@/lib/tide-derivation";
 import { scoreTrip, type SlackWindow, type TripScore } from "@/lib/trip-score";
+import {
+  matchLogEvidence,
+  type ConditionSnapshot,
+  type LoggedSession,
+  type LogEvidence,
+  type SessionMatch,
+} from "@/lib/log-evidence";
+import type { SessionWithCatches } from "@/db/queries/sessions";
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -24,6 +45,16 @@ export type LogInsight = {
   averageRating: number | null;
   averageVisibilityM: number | null;
   best: { date: string | null; rating: number | null; tideType: string | null; current: string | null; visibility: number | null } | null;
+  /** The prospective day described in logbook terms, so the comparison is inspectable. */
+  snapshot: ConditionSnapshot | null;
+  /** Sessions here dived in comparable conditions, closest first. Empty when none compare. */
+  matches: SessionMatch[];
+  comparedCount: number;
+  /** Points the log moved the rating by. Zero when nothing comparable was found. */
+  adjustment: number;
+  /** 0-1, how far the matches are worth trusting. */
+  strength: number;
+  summary: string;
 };
 
 export type TripPlan = TripScore & {
@@ -98,10 +129,83 @@ function rangesBetweenExtremes(extremes: TideExtreme[]): { timeMs: number; range
   return out;
 }
 
-/** Summarises what the user's own logbook says about this location — the guide rates a personal log above every general rule on the page. */
-async function summariseLog(userId: number, location: string): Promise<LogInsight> {
-  const sessions = await listSessions(userId, { location });
+/** Reduces a logged session to the fields lib/log-evidence.ts compares and scores. */
+function toLoggedSession(session: SessionWithCatches): LoggedSession {
+  return {
+    id: session.id,
+    date: session.date,
+    tideType: session.tideType,
+    tideRatio: session.tideRatio,
+    current: session.current,
+    currentSpeedKt: session.currentSpeedKt,
+    seaCondition: session.seaCondition,
+    windCondition: session.windCondition,
+    windDirection: session.windDirection,
+    month: session.date ? Number(session.date.slice(5, 7)) : null,
+    rating: session.rating,
+    fishAbundance: session.fishAbundance,
+    catchCount: session.catches.reduce((sum, c) => sum + (c.quantity ?? 0), 0),
+    visibility: session.visibility,
+  };
+}
 
+/** Mean of a set of bearings. A plain average would call north-northwest and north-northeast "south". */
+function circularMean(degrees: number[]): number | null {
+  if (degrees.length === 0) return null;
+  let x = 0;
+  let y = 0;
+  for (const deg of degrees) {
+    const rad = (deg * Math.PI) / 180;
+    x += Math.cos(rad);
+    y += Math.sin(rad);
+  }
+  if (Math.abs(x) < 1e-9 && Math.abs(y) < 1e-9) return null;
+  return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+}
+
+function mean(values: number[]): number | null {
+  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+}
+
+/**
+ * Describes the hours the diver would actually be in the water using the same
+ * vocabulary a logged session carries, so the two can be compared field for
+ * field. The tide fields come from `deriveTideFields` — the identical
+ * derivation the logbook applies when recording a session — rather than a
+ * second, subtly different one.
+ */
+function buildSnapshot(
+  windowHours: ForecastHour[],
+  extremes: TideExtreme[],
+  referenceTime: Date,
+  timeZone: string,
+  month: number
+): ConditionSnapshot {
+  const waveHeight = mean(windowHours.map((h) => h.waveHeightM).filter((v): v is number => v != null));
+  const windKt = mean(windowHours.map((h) => h.windSpeedKt).filter((v): v is number => v != null));
+  const currentKt = mean(windowHours.map((h) => h.currentSpeedKt).filter((v): v is number => v != null));
+  const windDir = circularMean(windowHours.map((h) => h.windDirectionDeg).filter((v): v is number => v != null));
+
+  const tide = extremes.length > 0 ? deriveTideFields(extremes, referenceTime, timeZone) : null;
+
+  return {
+    tideType: tide?.tideType ?? null,
+    tideRatio: tide?.tideRatio ?? null,
+    current: currentKt != null ? bucketCurrentLevel(currentKt) : null,
+    currentSpeedKt: currentKt != null ? Math.round(currentKt * 100) / 100 : null,
+    seaCondition: waveHeight != null ? bucketSeaCondition(waveHeight) : null,
+    windCondition: windKt != null ? bucketWindCondition(windKt) : null,
+    windDirectionDeg: windDir != null ? Math.round(windDir) : null,
+    month,
+  };
+}
+
+/** Summarises what the user's own logbook says about this location — the guide rates a personal log above every general rule on the page. */
+function summariseLog(
+  sessions: SessionWithCatches[],
+  snapshot: ConditionSnapshot | null,
+  evidence: LogEvidence | null
+): LogInsight {
   const ratings = sessions.map((s) => s.rating).filter((r): r is number => r != null);
   const visibilities = sessions.map((s) => s.visibility).filter((v): v is number => v != null);
   const best = sessions.filter((s) => s.rating != null).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
@@ -122,6 +226,14 @@ async function summariseLog(userId: number, location: string): Promise<LogInsigh
           visibility: best.visibility,
         }
       : null,
+    snapshot,
+    matches: evidence?.matches ?? [],
+    comparedCount: evidence?.comparedCount ?? 0,
+    adjustment: evidence?.adjustment ?? 0,
+    strength: evidence?.strength ?? 0,
+    summary:
+      evidence?.summary ??
+      "No sessions logged here yet, so the rating is the general model only.",
   };
 }
 
@@ -151,7 +263,7 @@ export async function planTrip(userId: number, request: TripPlanRequest): Promis
   const dayStart = zonedTimeToUtc(date, "00:00", timeZone);
   const dayEnd = zonedTimeToUtc(addDays(date, 1), "00:00", timeZone);
 
-  const [forecast, extremes] = await Promise.all([
+  const [forecast, extremes, loggedSessions] = await Promise.all([
     // Three days of history ahead of the day itself: the guide's 24-72 h
     // recovery window after a blow is what decides whether the sand has settled.
     getMarineForecast(lat, lng, new Date(dayStart.getTime() - 3 * DAY_MS).toISOString(), dayEnd.toISOString()),
@@ -166,6 +278,7 @@ export async function planTrip(userId: number, request: TripPlanRequest): Promis
       if (error instanceof StormglassError && error.code === "no_data") return [] as TideExtreme[];
       throw error;
     }),
+    listSessions(userId, { location }),
   ]);
 
   const slackWindows = deriveSlackWindows(extremes, dayStart.getTime(), dayEnd.getTime(), timeZone);
@@ -180,20 +293,28 @@ export async function planTrip(userId: number, request: TripPlanRequest): Promis
   const targetUtcMidnight = new Date(`${date}T00:00:00Z`).getTime();
   const forecastHorizonDays = Math.round((targetUtcMidnight - todayUtcMidnight) / DAY_MS);
 
-  const scored = scoreTrip({
+  const month = Number(date.slice(5, 7));
+  const scoreInput = {
     hours: forecast,
     dayStart,
     dayEnd,
     timeZone,
     lat,
-    month: Number(date.slice(5, 7)),
+    month,
     slackWindows,
     springNeapRatio,
     workingDepthM,
     shoreFacingDeg,
     estuaryInfluence,
     forecastHorizonDays: Math.max(0, forecastHorizonDays),
-  });
+  };
+
+  // Scored twice, on purpose. The log is compared against the hours the diver
+  // would actually be in the water, and which hours those are is an output of
+  // the first pass — so the first pass finds the window, and the second applies
+  // what the log says about conditions in it. Both passes are pure arithmetic
+  // over roughly a hundred hourly samples; no extra requests are made.
+  const forecastOnly = scoreTrip(scoreInput);
 
   const dayForecast = forecast.filter((h) => {
     const t = new Date(h.time).getTime();
@@ -201,7 +322,29 @@ export async function planTrip(userId: number, request: TripPlanRequest): Promis
   });
   const waterTemps = dayForecast.map((h) => h.waterTempC).filter((v): v is number => v != null);
 
-  const log = await summariseLog(userId, location);
+  const windowStartMs = forecastOnly.bestWindow
+    ? new Date(forecastOnly.bestWindow.startISO).getTime()
+    : dayStart.getTime();
+  const windowEndMs = forecastOnly.bestWindow
+    ? new Date(forecastOnly.bestWindow.endISO).getTime()
+    : dayEnd.getTime();
+  const windowHours = dayForecast.filter((h) => {
+    const t = new Date(h.time).getTime();
+    return t >= windowStartMs && t < windowEndMs;
+  });
+
+  const snapshot = buildSnapshot(
+    windowHours.length > 0 ? windowHours : dayForecast,
+    extremes,
+    new Date((windowStartMs + windowEndMs) / 2),
+    timeZone,
+    month
+  );
+
+  const evidence = matchLogEvidence(snapshot, loggedSessions.map(toLoggedSession));
+  const scored = evidence.matches.length > 0 ? scoreTrip({ ...scoreInput, logEvidence: evidence }) : forecastOnly;
+
+  const log = summariseLog(loggedSessions, snapshot, evidence);
 
   return {
     ...scored,

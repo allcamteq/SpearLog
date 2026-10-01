@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { button, cardClass, inputClass, labelClass } from "@/lib/ui";
-import { NOT_SCORED, type Confidence } from "@/lib/trip-score";
+import { NOT_SCORED, compass, type Confidence } from "@/lib/trip-score";
 import type { TripPlan } from "@/lib/trip-conditions";
 
 const COMPASS_POINTS = [
@@ -618,16 +618,107 @@ function TideCard({ plan }: { plan: TripPlan }) {
   );
 }
 
-/** The guide rates a personal log above every general rule, so the rating is shown next to what this logbook already knows about the site. */
+/** Reads the day being planned back in logbook terms, so the comparison the rating made is inspectable rather than implied. */
+function describeSnapshot(snapshot: NonNullable<TripPlan["log"]["snapshot"]>): string {
+  const parts: string[] = [];
+  if (snapshot.windCondition && snapshot.windDirectionDeg != null) {
+    parts.push(`${snapshot.windCondition.toLowerCase()} ${compass(snapshot.windDirectionDeg)} wind`);
+  } else if (snapshot.windCondition) {
+    parts.push(`${snapshot.windCondition.toLowerCase()} wind`);
+  }
+  if (snapshot.seaCondition) parts.push(`${snapshot.seaCondition.toLowerCase()} seas`);
+  if (snapshot.current) parts.push(`${snapshot.current.toLowerCase()} current`);
+  if (snapshot.tideType) parts.push(`${snapshot.tideType.toLowerCase()} tide`);
+  if (snapshot.tideRatio != null) parts.push(`${snapshot.tideRatio.toFixed(1)} m range`);
+  return parts.join(", ");
+}
+
+/** One previously dived day that resembles this one, with how it actually went. */
+function MatchRow({ match }: { match: TripPlan["log"]["matches"][number] }) {
+  const good = match.outcome > 0.1;
+  const bad = match.outcome < -0.1;
+  const tone = good ? "text-success-foreground" : bad ? "text-danger" : "text-muted";
+  const edge = good ? "border-l-success-foreground" : bad ? "border-l-danger" : "border-l-surface-border";
+
+  return (
+    <li className={`border-l-2 ${edge} bg-background py-2 pl-3 pr-2`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="text-sm font-medium text-foreground">{match.date ?? "Undated session"}</span>
+        <span className="text-xs text-muted">{Math.round(match.similarity * 100)}% match</span>
+      </div>
+      <p className={`mt-0.5 text-xs ${tone}`}>
+        {match.rating != null && <>Rated {match.rating}/5</>}
+        {match.rating != null && match.catchCount > 0 && " · "}
+        {match.catchCount > 0 && (
+          <>
+            {match.catchCount} fish landed
+          </>
+        )}
+        {match.rating != null && match.catchCount === 0 && " · nothing landed"}
+        {match.visibility != null && ` · ${match.visibility} m viz`}
+      </p>
+      {match.sharedConditions.length > 0 && (
+        <p className="mt-0.5 text-xs text-muted">Matched on {match.sharedConditions.join(", ")}.</p>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The guide rates a personal log above every general rule, so this is where the
+ * rating stops being generic. Conditions mean different things at different
+ * marks, and the only record of what they mean *here* is this logbook — so when
+ * comparable days exist, the adjustment they made to the rating leads the card.
+ */
 function LogCard({ plan }: { plan: TripPlan }) {
   const { log } = plan;
+  const adjusted = plan.logAdjustment;
 
   return (
     <section className={`${cardClass} p-4`}>
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-semibold">What your own log says</h2>
-        <ConfidenceBadge level="High" />
+        <ConfidenceBadge level={log.strength >= 0.5 ? "High" : log.matches.length > 0 ? "Medium" : "High"} />
       </div>
+
+      {adjusted && (
+        <div
+          className={`mt-3 rounded-lg p-3 ${
+            adjusted.points > 0 ? "bg-success-soft text-success-foreground" : "bg-danger-soft text-danger"
+          }`}
+        >
+          <p className="text-sm font-semibold">
+            {adjusted.points > 0 ? "+" : "−"}
+            {Math.abs(adjusted.points).toFixed(1)} from your log at this location
+          </p>
+          <p className="mt-1 text-xs">
+            {log.summary} The forecast alone rated this {adjusted.forecastOnly.toFixed(1)}/10; your own record here
+            moved it to {plan.score.toFixed(1)}/10.
+          </p>
+        </div>
+      )}
+
+      {log.snapshot && (
+        <p className="mt-3 text-xs text-muted">
+          Comparing against <span className="text-foreground">{describeSnapshot(log.snapshot)}</span> during the
+          recommended window.
+        </p>
+      )}
+
+      {log.matches.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {log.matches.slice(0, 5).map((match) => (
+            <MatchRow key={match.id} match={match} />
+          ))}
+        </ul>
+      )}
+
+      {log.matches.length === 0 && log.comparedCount > 0 && (
+        <p className="mt-2 text-sm text-muted">
+          {log.summary} Conditions and how they play out are specific to a mark, so only days dived here in a
+          comparable sea, wind and tide can move the rating.
+        </p>
+      )}
 
       {log.sessionCount === 0 ? (
         <p className="mt-2 text-sm text-muted">
