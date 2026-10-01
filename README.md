@@ -58,6 +58,8 @@ The dashboard (`/`) filters sessions by location, country, rating range, date ra
    - `AUTH_SECRET` — signs/encrypts session JWTs. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
    - `LOCATIONIQ_API_KEY` — required in production. Geocoding falls back to the free Nominatim endpoint locally (fine from a home IP), but Nominatim blocks cloud/datacenter IPs, so it fails silently on Vercel without this set. Sign up for a free key at [locationiq.com](https://locationiq.com).
    - `STORMGLASS_API_KEY` — powers the tide/current "Fetch conditions" feature. Without it, those lookups fail. Sign up at [stormglass.io](https://stormglass.io) (free tier ~50 requests/day).
+   - `RESEND_API_KEY` — powers password reset emails. Without it reset requests are accepted but the link is only written to the server log, so nobody can actually reset. Sign up at [resend.com](https://resend.com) and verify the sending domain.
+   - `EMAIL_FROM` — the sender for those emails, on a domain verified in Resend. Defaults to `SpearLog <noreply@spearlog.app>`.
 5. Deploy (via `vercel --prod` or by connecting the git repo).
 
 For local dev against the same hosted data instead of the local file, copy `.env.example` to `.env.local` and fill in the same two values.

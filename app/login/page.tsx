@@ -95,6 +95,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <button type="submit" className={button("primary")}>
             Log in
           </button>
+          <p className="text-sm text-muted">
+            <Link href="/forgot-password" className="text-accent hover:underline">
+              Forgot your password?
+            </Link>
+          </p>
         </form>
         <p className="text-sm text-muted">
           Don&rsquo;t have an account?{" "}

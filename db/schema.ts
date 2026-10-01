@@ -127,6 +127,34 @@ export const sessionMarks = sqliteTable("session_marks", {
     .references(() => marks.id, { onDelete: "cascade" }),
 });
 
+/**
+ * Outstanding password-reset links — see lib/password-reset.ts.
+ *
+ * `tokenHash` is a SHA-256 of the token, never the token itself: the plain
+ * value exists only in the email, so a leaked database can't be used to reset
+ * anyone's password. Rows are kept after use rather than deleted, so a reused
+ * link can be told apart from an expired or forged one.
+ */
+export const passwordResetTokens = sqliteTable(
+  "password_reset_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: text("expires_at").notNull(), // "YYYY-MM-DD HH:MM:SS", UTC
+    usedAt: text("used_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("password_reset_tokens_hash_idx").on(table.tokenHash),
+    index("password_reset_tokens_user_idx").on(table.userId),
+  ]
+);
+
 // Sliding-window hit log for abuse checks (signup/login) — see lib/rate-limit.ts.
 export const rateLimitHits = sqliteTable(
   "rate_limit_hits",
