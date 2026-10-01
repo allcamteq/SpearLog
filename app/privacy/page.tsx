@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cardClass } from "@/lib/ui";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata: Metadata = { title: "Privacy policy — SpearLog" };
 
@@ -31,12 +32,6 @@ export default function PrivacyPage() {
               size), and named &quot;marks&quot; — fishing spots you save, which can include precise GPS
               coordinates.
             </li>
-            <li>
-              <span className="text-foreground">Photos:</span> any photos you attach to a session are uploaded to
-              our file storage provider (Vercel Blob). Photo URLs use a random, unguessable identifier rather than
-              your name or session details, but they are not access-controlled — anyone who obtained the exact URL
-              could view the image. Don&apos;t upload anything you wouldn&apos;t want seen if a link ever leaked.
-            </li>
           </ul>
         </div>
 
@@ -62,7 +57,7 @@ export default function PrivacyPage() {
               fetch tide, current, or weather conditions for a session.
             </li>
             <li>
-              <span className="text-foreground">Vercel</span> — hosts the app and stores uploaded photos.
+              <span className="text-foreground">Vercel</span> — hosts the app.
             </li>
             <li>
               <span className="text-foreground">Turso</span> — hosts the database that stores your account and
@@ -75,7 +70,23 @@ export default function PrivacyPage() {
           <h2 className="mb-1 font-semibold">Deleting your data</h2>
           <p className="text-muted">
             There isn&apos;t a self-service &quot;delete my account&quot; button yet. If you&apos;d like your account
-            and all associated data deleted, contact the app owner directly and it will be handled by request.
+            and all associated data deleted, email{" "}
+            <a className="text-accent hover:underline" href={CONTACT_MAILTO}>
+              {CONTACT_EMAIL}
+            </a>{" "}
+            and it will be handled by request.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="mb-1 font-semibold">Contacting us</h2>
+          <p className="text-muted">
+            For anything in this policy — a deletion or correction request, a question about what is stored, or a
+            problem with your account — email{" "}
+            <a className="text-accent hover:underline" href={CONTACT_MAILTO}>
+              {CONTACT_EMAIL}
+            </a>
+            . It is the only route for the requests above, so it is monitored.
           </p>
         </div>
 

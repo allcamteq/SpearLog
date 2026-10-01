@@ -8,6 +8,13 @@
       "when": 1785749146570,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790886327126,
+      "tag": "0001_drop_session_photos",
+      "breakpoints": true
     }
   ]
 }

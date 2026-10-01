@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSessionById } from "@/db/queries/sessions";
-import { listPhotos } from "@/db/queries/photos";
 import { RatingBadge } from "@/components/rating-badge";
 import { DeleteSessionButton } from "@/components/delete-session-button";
-import { SessionPhotos } from "@/components/session-photos";
 import { CURRENT_LEVEL_LABELS, TIDE_TYPE_LABELS } from "@/lib/constants";
 import { compassDirection } from "@/lib/tide-derivation";
 import { getUserId } from "@/lib/auth-helpers";
@@ -50,7 +48,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
   if (!userId) redirect("/login");
 
   const { id } = await params;
-  const [session, photos] = await Promise.all([getSessionById(userId, Number(id)), listPhotos(userId, Number(id))]);
+  const session = await getSessionById(userId, Number(id));
 
   if (!session) notFound();
 
@@ -154,9 +152,6 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         )}
       </SectionCard>
 
-      <SectionCard title="Photos">
-        <SessionPhotos sessionId={session.id} initialPhotos={photos} />
-      </SectionCard>
 
       {session.comments && (
         <SectionCard title="Comments">

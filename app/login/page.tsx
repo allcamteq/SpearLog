@@ -23,7 +23,7 @@ const FEATURE_HIGHLIGHTS = [
   },
   {
     title: "Build a Complete Fishing Logbook",
-    description: "Keep a detailed record of every trip, including photos, notes, fishing marks, catches and conditions.",
+    description: "Keep a detailed record of every trip — notes, fishing marks, catches and conditions.",
   },
 ] as const;
 

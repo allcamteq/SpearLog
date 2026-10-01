@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { getSessionById } from "@/db/queries/sessions";
 import { listAllOptionValues } from "@/db/queries/options";
 import { listMarks } from "@/db/queries/marks";
-import { listPhotos } from "@/db/queries/photos";
 import { SessionForm } from "@/components/session-form";
 import type { SessionFormValues } from "@/lib/validation/session";
 import { getUserId } from "@/lib/auth-helpers";
@@ -12,11 +11,10 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
   if (!userId) redirect("/login");
 
   const { id } = await params;
-  const [session, options, marks, photos] = await Promise.all([
+  const [session, options, marks] = await Promise.all([
     getSessionById(userId, Number(id)),
     listAllOptionValues(userId),
     listMarks(userId),
-    listPhotos(userId, Number(id)),
   ]);
 
   if (!session) notFound();
@@ -67,7 +65,6 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
         sessionId={session.id}
         defaultValues={defaultValues}
         options={{ ...options, marks: marks.map((m) => ({ id: m.id, name: m.name, location: m.location })) }}
-        photos={photos}
       />
     </div>
   );

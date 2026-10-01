@@ -18,12 +18,10 @@ import {
 import { CatchRowFields } from "@/components/catch-row-fields";
 import { RatingInput } from "@/components/rating-input";
 import { EditableSelect } from "@/components/editable-select";
-import { SessionPhotos } from "@/components/session-photos";
 import { MarkSelect, type MarkOption } from "@/components/mark-select";
 import { GpsCoordinateInput } from "@/components/gps-coordinate-input";
 import { compassDirection } from "@/lib/tide-derivation";
 import { parseGps, formatGps } from "@/lib/gps";
-import type { SessionPhotoRow } from "@/db/schema";
 import { inputClass, labelClass, cardClass, button } from "@/lib/ui";
 
 export type SessionFormOptions = {
@@ -95,13 +93,11 @@ export function SessionForm({
   sessionId,
   defaultValues,
   options,
-  photos,
 }: {
   mode: "create" | "edit";
   sessionId?: number;
   defaultValues?: SessionFormValues;
   options: SessionFormOptions;
-  photos?: SessionPhotoRow[];
 }) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -490,12 +486,6 @@ export function SessionForm({
           ))}
         </div>
       </SectionCard>
-
-      {mode === "edit" && sessionId && (
-        <SectionCard title="Photos">
-          <SessionPhotos sessionId={sessionId} initialPhotos={photos ?? []} />
-        </SectionCard>
-      )}
 
       <SectionCard title="Comments">
         <textarea rows={4} className={inputClass} {...register("session.comments")} />

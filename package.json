@@ -15,7 +15,6 @@
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@libsql/client": "^0.17.4",
-    "@vercel/blob": "^2.6.1",
     "@vercel/functions": "^3.7.6",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",

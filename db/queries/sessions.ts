@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, like, sql, desc, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sessions, catches, sessionPhotos, sessionMarks, marks, type SessionRow, type CatchRow } from "@/db/schema";
+import { sessions, catches, sessionMarks, marks, type SessionRow, type CatchRow } from "@/db/schema";
 import type { SessionInput, CatchInput, SessionMarkInput, SessionFilterInput } from "@/lib/validation/session";
 import { ensureOption, type Tx } from "@/db/queries/options";
 
@@ -264,25 +264,19 @@ export async function setSessionConditions(
     .where(and(eq(sessions.id, id), eq(sessions.userId, userId)));
 }
 
-/** Deletes the session and returns the blob storage pathnames of any photos that were attached, so the caller can remove the actual files from Blob storage (a network call, so it can't happen inside this DB transaction). */
-export async function deleteSession(userId: number, id: number): Promise<string[]> {
+/** Deletes the session and everything hanging off it. Returns false when the session isn't the user's. */
+export async function deleteSession(userId: number, id: number): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [owned] = await tx
       .select({ id: sessions.id })
       .from(sessions)
       .where(and(eq(sessions.id, id), eq(sessions.userId, userId)));
-    if (!owned) return [];
+    if (!owned) return false;
 
-    const photos = await tx
-      .select({ pathname: sessionPhotos.pathname })
-      .from(sessionPhotos)
-      .where(eq(sessionPhotos.sessionId, id));
-
-    await tx.delete(sessionPhotos).where(eq(sessionPhotos.sessionId, id));
     await tx.delete(catches).where(eq(catches.sessionId, id));
     await tx.delete(sessionMarks).where(eq(sessionMarks.sessionId, id));
     await tx.delete(sessions).where(eq(sessions.id, id));
 
-    return photos.map((p) => p.pathname);
+    return true;
   });
 }

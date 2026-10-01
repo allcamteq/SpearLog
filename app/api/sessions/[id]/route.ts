@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { del } from "@vercel/blob";
 import { deleteSession, getSessionById, updateSession } from "@/db/queries/sessions";
 import { sessionFormSchema } from "@/lib/validation/session";
 import { getUserId } from "@/lib/auth-helpers";
@@ -46,13 +45,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const photoPathnames = await deleteSession(userId, Number(id));
-
-  if (photoPathnames.length > 0 && process.env.BLOB_READ_WRITE_TOKEN) {
-    await del(photoPathnames).catch(() => {
-      // best-effort — the DB records are already gone either way
-    });
-  }
+  await deleteSession(userId, Number(id));
 
   return NextResponse.json({ ok: true });
 }

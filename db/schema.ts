@@ -127,19 +127,6 @@ export const sessionMarks = sqliteTable("session_marks", {
     .references(() => marks.id, { onDelete: "cascade" }),
 });
 
-export const sessionPhotos = sqliteTable("session_photos", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  sessionId: integer("session_id")
-    .notNull()
-    .references(() => sessions.id, { onDelete: "cascade" }),
-
-  url: text("url").notNull(), // public Vercel Blob URL
-  pathname: text("pathname").notNull(), // blob storage key, needed to delete the file later
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(current_timestamp)`),
-});
-
 // Sliding-window hit log for abuse checks (signup/login) — see lib/rate-limit.ts.
 export const rateLimitHits = sqliteTable(
   "rate_limit_hits",
@@ -173,7 +160,6 @@ export type CatchRow = typeof catches.$inferSelect;
 export type NewCatchRow = typeof catches.$inferInsert;
 export type OptionValueRow = typeof optionValues.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
-export type SessionPhotoRow = typeof sessionPhotos.$inferSelect;
 export type MarkRow = typeof marks.$inferSelect;
 export type NewMarkRow = typeof marks.$inferInsert;
 export type SessionMarkRow = typeof sessionMarks.$inferSelect;
