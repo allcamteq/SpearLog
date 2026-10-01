@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cardClass } from "@/lib/ui";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata: Metadata = { title: "Terms of service — SpearLog" };
 
@@ -52,6 +53,17 @@ export default function TermsPage() {
             The service may change, be temporarily unavailable, or be discontinued at any time, with or without
             notice. See the <Link href="/privacy" className="text-accent hover:underline">privacy policy</Link> for
             how your data is handled.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="mb-1 font-semibold">Getting in touch</h2>
+          <p className="text-muted">
+            Questions about these terms, or about your account, go to{" "}
+            <a className="text-accent hover:underline" href={CONTACT_MAILTO}>
+              {CONTACT_EMAIL}
+            </a>
+            .
           </p>
         </div>
       </section>

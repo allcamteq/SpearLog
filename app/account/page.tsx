@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getUserId } from "@/lib/auth-helpers";
 import { getUserById } from "@/db/queries/users";
 import { formatDateDisplay } from "@/lib/date";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 import { cardClass, button } from "@/lib/ui";
 
 export default async function AccountPage() {
@@ -65,6 +66,17 @@ export default async function AccountPage() {
           place.
         </p>
         <p className="mt-2 text-xs text-muted">Version 0.1.0 (placeholder)</p>
+      </section>
+
+      <section className={`${cardClass} p-5`}>
+        <h2 className="mb-2 text-sm font-semibold">Support</h2>
+        <p className="text-sm text-muted">
+          Account deletion and data corrections aren&apos;t self-service yet, so they go by email — as does anything
+          else that needs a human.
+        </p>
+        <a className="mt-2 inline-block text-sm text-accent hover:underline" href={CONTACT_MAILTO}>
+          {CONTACT_EMAIL}
+        </a>
       </section>
 
       <section className={`${cardClass} p-5`}>
