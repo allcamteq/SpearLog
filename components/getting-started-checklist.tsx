@@ -91,6 +91,15 @@ export function GettingStartedChecklist() {
             <div className="flex-1">
               <p className="text-sm font-medium">{step.title}</p>
               <p className="mt-0.5 text-xs text-muted">{step.description}</p>
+              {step.action === "import-sessions" && (
+                <a
+                  href="/session-import-template.csv"
+                  download
+                  className="mt-1 inline-block text-xs text-muted underline underline-offset-2 hover:text-foreground"
+                >
+                  Download CSV template
+                </a>
+              )}
             </div>
             {step.action === "import-sessions" && <SessionImportButton />}
             {step.href && step.cta && (
