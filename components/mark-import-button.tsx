@@ -3,10 +3,21 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { button } from "@/lib/ui";
+import type { MarkRow } from "@/db/schema";
+import { parseGpx } from "@/lib/gpx";
+import { encryptMarkCoordinates } from "@/lib/private-gps-crypto";
 
 type ImportResult = { imported: number; total: number; errors: string[] } | { error: string };
 
-export function MarkImportButton() {
+export function MarkImportButton({
+  privateGpsEnabled = false,
+  gpsKey,
+  existingMarks = [],
+}: {
+  privateGpsEnabled?: boolean;
+  gpsKey?: CryptoKey;
+  existingMarks?: MarkRow[];
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(false);
@@ -22,11 +33,22 @@ export function MarkImportButton() {
 
     try {
       const text = await file.text();
-      const res = await fetch("/api/marks/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/gpx+xml" },
-        body: text,
-      });
+      const request = privateGpsEnabled && gpsKey
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              waypoints: await Promise.all(
+                parseGpx(text).map(async (waypoint) => ({
+                  name: waypoint.name,
+                  gpsEncrypted: await encryptMarkCoordinates(gpsKey, { lat: waypoint.lat, lng: waypoint.lng }),
+                  location: existingMarks.find((mark) => mark.name.toLowerCase() === waypoint.name.toLowerCase())?.location ?? null,
+                  locationDetails: existingMarks.find((mark) => mark.name.toLowerCase() === waypoint.name.toLowerCase())?.locationDetails ?? null,
+                }))
+              ),
+            }),
+          }
+        : { headers: { "Content-Type": "application/gpx+xml" }, body: text };
+      const res = await fetch("/api/marks/import", { method: "POST", ...request });
       const data = await res.json();
       setResult(data);
       if (res.ok && data.imported > 0) {

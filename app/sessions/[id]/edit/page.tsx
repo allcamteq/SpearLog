@@ -5,16 +5,18 @@ import { listMarks } from "@/db/queries/marks";
 import { SessionForm } from "@/components/session-form";
 import type { SessionFormValues } from "@/lib/validation/session";
 import { getUserId } from "@/lib/auth-helpers";
+import { getUserById } from "@/db/queries/users";
 
 export default async function EditSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const userId = await getUserId();
   if (!userId) redirect("/login");
 
   const { id } = await params;
-  const [session, options, marks] = await Promise.all([
+  const [session, options, marks, user] = await Promise.all([
     getSessionById(userId, Number(id)),
     listAllOptionValues(userId),
     listMarks(userId),
+    getUserById(userId),
   ]);
 
   if (!session) notFound();
@@ -65,6 +67,7 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
         sessionId={session.id}
         defaultValues={defaultValues}
         options={{ ...options, marks: marks.map((m) => ({ id: m.id, name: m.name, location: m.location })) }}
+        privateGpsEnabled={user?.privateGpsEnabled ?? false}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { listOptions } from "@/db/queries/options";
 import { listMarks } from "@/db/queries/marks";
+import { getUserById } from "@/db/queries/users";
 import { OPTION_CATEGORIES, OPTION_CATEGORY_LABELS, TIDE_TYPES, TIDE_TYPE_LABELS, CURRENT_LEVELS } from "@/lib/constants";
 import { OptionListManager } from "@/components/option-list-manager";
 import { MarksTable } from "@/components/marks-table";
@@ -11,8 +13,11 @@ export default async function MaintenancePage() {
   const userId = await getUserId();
   if (!userId) redirect("/login");
 
-  const lists = await Promise.all(OPTION_CATEGORIES.map((category) => listOptions(userId, category)));
-  const marks = await listMarks(userId);
+  const [lists, marks, user] = await Promise.all([
+    Promise.all(OPTION_CATEGORIES.map((category) => listOptions(userId, category))),
+    listMarks(userId),
+    getUserById(userId),
+  ]);
   const locationOptions = lists[OPTION_CATEGORIES.indexOf("location")].map((o) => o.value);
   const locationDetailsOptions = lists[OPTION_CATEGORIES.indexOf("locationDetails")].map((o) => o.value);
 
@@ -38,7 +43,14 @@ export default async function MaintenancePage() {
         <p className="mb-3 text-xs text-muted">
           Named GPS waypoints — select them on catches, attach several to a session, and browse them on the Marks tab.
         </p>
-        <MarksTable marks={marks} locationOptions={locationOptions} locationDetailsOptions={locationDetailsOptions} />
+        {user?.privateGpsEnabled ? (
+          <p className="text-sm text-muted">
+            Open the <Link href="/marks" className="text-accent hover:underline">Marks page</Link> to unlock and
+            manage your encrypted coordinates.
+          </p>
+        ) : (
+          <MarksTable marks={marks} locationOptions={locationOptions} locationDetailsOptions={locationDetailsOptions} />
+        )}
       </section>
 
       <section className={`${cardClass} p-5`}>

@@ -17,6 +17,7 @@ export function MarkSelect({
   placeholder = "— No mark —",
   defaultLocation,
   defaultLocationDetails,
+  privateGpsEnabled = false,
 }: {
   value: number | null | undefined;
   onChange: (id: number | null) => void;
@@ -26,6 +27,7 @@ export function MarkSelect({
   /** Pre-filled onto a newly created mark — typically the session's own location/location details, so a mark added inline groups with it right away. */
   defaultLocation?: string | null;
   defaultLocationDetails?: string | null;
+  privateGpsEnabled?: boolean;
 }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -81,7 +83,11 @@ export function MarkSelect({
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <GpsCoordinateInput value={coord} onChange={setCoord} />
+        {privateGpsEnabled ? (
+          <p className="text-xs text-muted">Add private GPS coordinates for this mark from the Marks page.</p>
+        ) : (
+          <GpsCoordinateInput value={coord} onChange={setCoord} />
+        )}
         {error && <p className="text-xs text-danger">{error}</p>}
         <div className="flex gap-3">
           <button

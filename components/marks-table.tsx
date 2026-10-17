@@ -9,6 +9,7 @@ import { GpsCoordinateInput } from "@/components/gps-coordinate-input";
 import { PopulateMarkLocationButton } from "@/components/populate-mark-location-button";
 import { formatGps, type GpsCoordinate } from "@/lib/gps";
 import { useGpsFormat } from "@/lib/use-gps-format";
+import { encryptMarkCoordinates } from "@/lib/private-gps-crypto";
 
 type SortKey = "name" | "gps" | "location";
 type SortDir = "asc" | "desc";
@@ -46,10 +47,14 @@ export function MarksTable({
   marks,
   locationOptions,
   locationDetailsOptions,
+  privateGpsEnabled = false,
+  gpsKey,
 }: {
   marks: MarkRow[];
   locationOptions: string[];
   locationDetailsOptions: string[];
+  privateGpsEnabled?: boolean;
+  gpsKey?: CryptoKey;
 }) {
   const router = useRouter();
   const [format] = useGpsFormat();
@@ -113,66 +118,88 @@ export function MarksTable({
   async function handleSave(id: number) {
     const trimmedName = form.name.trim();
     if (!trimmedName) return;
-
-    setPending(true);
-    setError(null);
-
-    const res = await fetch(`/api/marks/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: trimmedName,
-        location: form.location || null,
-        locationDetails: form.locationDetails || null,
-        lat: form.coord?.lat ?? null,
-        lng: form.coord?.lng ?? null,
-        freeText: form.freeText || null,
-        comments: form.comments || null,
-      }),
-    });
-    setPending(false);
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setError(typeof data?.error === "string" ? data.error : "Could not save that mark.");
+    if (privateGpsEnabled && !gpsKey) {
+      setError("Unlock Private GPS before saving mark coordinates.");
       return;
     }
 
-    setEditingId(null);
-    router.refresh();
+    setPending(true);
+    setError(null);
+    try {
+      const gpsEncrypted = privateGpsEnabled && gpsKey && form.coord
+        ? await encryptMarkCoordinates(gpsKey, form.coord)
+        : null;
+      const res = await fetch(`/api/marks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          location: form.location || null,
+          locationDetails: form.locationDetails || null,
+          lat: privateGpsEnabled ? null : form.coord?.lat ?? null,
+          lng: privateGpsEnabled ? null : form.coord?.lng ?? null,
+          gpsEncrypted,
+          freeText: form.freeText || null,
+          comments: form.comments || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(typeof data?.error === "string" ? data.error : "Could not save that mark.");
+        return;
+      }
+
+      setEditingId(null);
+      router.refresh();
+    } catch {
+      setError("Could not encrypt or save the GPS coordinates.");
+    } finally {
+      setPending(false);
+    }
   }
 
   async function handleCreate() {
     const trimmedName = addForm.name.trim();
     if (!trimmedName) return;
-
-    setAddPending(true);
-    setAddError(null);
-
-    const res = await fetch("/api/marks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: trimmedName,
-        location: addForm.location || null,
-        locationDetails: addForm.locationDetails || null,
-        lat: addForm.coord?.lat ?? null,
-        lng: addForm.coord?.lng ?? null,
-        freeText: addForm.freeText || null,
-        comments: addForm.comments || null,
-      }),
-    });
-    setAddPending(false);
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setAddError(typeof data?.error === "string" ? data.error : "Could not add that mark.");
+    if (privateGpsEnabled && !gpsKey) {
+      setAddError("Unlock Private GPS before saving mark coordinates.");
       return;
     }
 
-    setAddForm(emptyForm);
-    setAdding(false);
-    router.refresh();
+    setAddPending(true);
+    setAddError(null);
+    try {
+      const gpsEncrypted = privateGpsEnabled && gpsKey && addForm.coord
+        ? await encryptMarkCoordinates(gpsKey, addForm.coord)
+        : null;
+      const res = await fetch("/api/marks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          location: addForm.location || null,
+          locationDetails: addForm.locationDetails || null,
+          lat: privateGpsEnabled ? null : addForm.coord?.lat ?? null,
+          lng: privateGpsEnabled ? null : addForm.coord?.lng ?? null,
+          gpsEncrypted,
+          freeText: addForm.freeText || null,
+          comments: addForm.comments || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setAddError(typeof data?.error === "string" ? data.error : "Could not add that mark.");
+        return;
+      }
+
+      setAddForm(emptyForm);
+      setAdding(false);
+      router.refresh();
+    } catch {
+      setAddError("Could not encrypt or save the GPS coordinates.");
+    } finally {
+      setAddPending(false);
+    }
   }
 
   function handleCancelAdd() {
@@ -317,7 +344,9 @@ export function MarksTable({
                     </td>
                     <td className="px-3 py-2 text-xs text-muted">{mark.freeText || "—"}</td>
                     <td className="px-3 py-2">
-                      <PopulateMarkLocationButton markId={mark.id} hasGps={hasGps} hasLocation={!!mark.location} />
+                      {!privateGpsEnabled && (
+                        <PopulateMarkLocationButton markId={mark.id} hasGps={hasGps} hasLocation={!!mark.location} />
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <button

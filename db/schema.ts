@@ -13,6 +13,7 @@ export const users = sqliteTable(
     email: text("email").notNull(), // stored lowercased
     passwordHash: text("password_hash").notNull(),
     name: text("name"),
+    privateGpsEnabled: integer("private_gps_enabled", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(current_timestamp)`),
@@ -108,6 +109,7 @@ export const marks = sqliteTable(
     locationDetails: text("location_details"),
     lat: real("lat"), // decimal degrees, canonical storage
     lng: real("lng"),
+    gpsEncrypted: text("gps_encrypted"),
     freeText: text("free_text"), // fallback description for when someone doesn't want to record exact GPS
     comments: text("comments"),
     createdAt: text("created_at")

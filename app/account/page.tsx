@@ -2,15 +2,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUserId } from "@/lib/auth-helpers";
 import { getUserById } from "@/db/queries/users";
+import { listMarks } from "@/db/queries/marks";
 import { formatDateDisplay } from "@/lib/date";
 import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 import { cardClass, button } from "@/lib/ui";
+import { PrivateGpsSettings } from "@/components/private-gps-settings";
 
 export default async function AccountPage() {
   const userId = await getUserId();
   if (!userId) redirect("/login");
 
-  const user = await getUserById(userId);
+  const [user, marks] = await Promise.all([getUserById(userId), listMarks(userId)]);
   if (!user) redirect("/login");
 
   const memberSince = formatDateDisplay(user.createdAt.slice(0, 10));
@@ -42,6 +44,8 @@ export default async function AccountPage() {
           Edit profile (coming soon)
         </button>
       </section>
+
+      <PrivateGpsSettings enabled={user.privateGpsEnabled} marks={marks} />
 
       <section className={`${cardClass} p-5`}>
         <h2 className="mb-3 text-sm font-semibold">Subscription</h2>

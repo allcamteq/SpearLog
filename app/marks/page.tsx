@@ -3,13 +3,9 @@ import { listMarks } from "@/db/queries/marks";
 import { listOptions } from "@/db/queries/options";
 import { parseMarkFilters } from "@/lib/filters";
 import { getUserId } from "@/lib/auth-helpers";
+import { getUserById } from "@/db/queries/users";
 import { MarkFilters } from "@/components/mark-filters";
-import { MarksMapSection } from "@/components/marks-map-section";
-import { MarkExportButton } from "@/components/mark-export-button";
-import { MarkExportCsvButton } from "@/components/mark-export-csv-button";
-import { MarkImportButton } from "@/components/mark-import-button";
-import { PopulateMarkLocationsButton } from "@/components/populate-mark-locations-button";
-import { MarksTable } from "@/components/marks-table";
+import { PrivateGpsMarksWorkspace } from "@/components/private-gps-marks-workspace";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -24,29 +20,19 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
   }
 
   const filters = parseMarkFilters(usp);
-  const [marks, allMarks, locationOptions, locationDetailsOptions] = await Promise.all([
+  const [marks, allMarks, locationOptions, locationDetailsOptions, user] = await Promise.all([
     listMarks(userId, filters),
     listMarks(userId),
     listOptions(userId, "location"),
     listOptions(userId, "locationDetails"),
+    getUserById(userId),
   ]);
-
-  const mappable = marks
-    .filter((m): m is typeof m & { lat: number; lng: number } => m.lat != null && m.lng != null)
-    .map((m) => ({ id: m.id, name: m.name, location: m.location, lat: m.lat, lng: m.lng }));
-
-  const focusParam = typeof rawParams.focus === "string" ? rawParams.focus : undefined;
-  const focusMarkId = focusParam ? (mappable.find((m) => m.name === focusParam)?.id ?? null) : null;
+  const focusMarkName = typeof rawParams.focus === "string" ? rawParams.focus : undefined;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Marks</h1>
-        <div className="flex flex-wrap gap-2">
-          <MarkImportButton />
-          <MarkExportButton />
-          <MarkExportCsvButton />
-        </div>
       </div>
 
       <MarkFilters
@@ -54,16 +40,13 @@ export default async function MarksPage({ searchParams }: { searchParams: Promis
         markOptions={allMarks.map((m) => m.name)}
       />
 
-      <MarksMapSection marks={mappable} focusMarkId={focusMarkId} />
-
-      <div>
-        <PopulateMarkLocationsButton />
-      </div>
-
-      <MarksTable
+      <PrivateGpsMarksWorkspace
         marks={marks}
+        allMarks={allMarks}
         locationOptions={locationOptions.map((o) => o.value)}
         locationDetailsOptions={locationDetailsOptions.map((o) => o.value)}
+        privateGpsEnabled={user?.privateGpsEnabled ?? false}
+        focusMarkName={focusMarkName}
       />
     </div>
   );

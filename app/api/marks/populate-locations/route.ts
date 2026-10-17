@@ -4,6 +4,7 @@ import { addOption } from "@/db/queries/options";
 import { reverseGeocode, geocodeLocation } from "@/lib/geocode";
 import { getUserId } from "@/lib/auth-helpers";
 import { checkProviderQuota } from "@/lib/rate-limit";
+import { getUserById } from "@/db/queries/users";
 
 // Space out lookups when there are several marks to resolve in one go — stays
 // under both providers' free-tier caps (Nominatim ~1/second, LocationIQ 2/second).
@@ -14,6 +15,9 @@ const GEOCODE_DELAY_MS = 1100;
 export async function POST() {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ((await getUserById(userId))?.privateGpsEnabled) {
+    return NextResponse.json({ error: "Automatic geotagging is unavailable while Private GPS is enabled." }, { status: 409 });
+  }
 
   const [missingLocation, missingGps] = await Promise.all([
     listMarksMissingLocation(userId),

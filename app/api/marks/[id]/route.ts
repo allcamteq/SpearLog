@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMarkById, updateMark, deleteMark } from "@/db/queries/marks";
 import { markSchema } from "@/lib/validation/mark";
 import { getUserId } from "@/lib/auth-helpers";
+import { getUserById } from "@/db/queries/users";
+
+function isEncryptedGps(value: string | null | undefined): boolean {
+  if (value == null) return true;
+  try {
+    const payload = JSON.parse(value);
+    return payload.version === 1 && typeof payload.iv === "string" && typeof payload.ciphertext === "string";
+  } catch {
+    return false;
+  }
+}
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -15,6 +26,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const user = await getUserById(userId);
+  if (user?.privateGpsEnabled) {
+    if (parsed.data.lat != null || parsed.data.lng != null || !isEncryptedGps(parsed.data.gpsEncrypted)) {
+      return NextResponse.json({ error: "Private GPS marks must be sent as encrypted coordinates." }, { status: 400 });
+    }
+  } else if (parsed.data.gpsEncrypted != null) {
+    return NextResponse.json({ error: "Enable Private GPS before sending encrypted coordinates." }, { status: 400 });
   }
 
   const existing = await getMarkById(userId, Number(id));

@@ -93,11 +93,13 @@ export function SessionForm({
   sessionId,
   defaultValues,
   options,
+  privateGpsEnabled = false,
 }: {
   mode: "create" | "edit";
   sessionId?: number;
   defaultValues?: SessionFormValues;
   options: SessionFormOptions;
+  privateGpsEnabled?: boolean;
 }) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -449,6 +451,7 @@ export function SessionForm({
                       placeholder="Select a mark…"
                       defaultLocation={watchedLocation as string | null | undefined}
                       defaultLocationDetails={watchedLocationDetails as string | null | undefined}
+                      privateGpsEnabled={privateGpsEnabled}
                     />
                   )}
                 />

@@ -7,6 +7,7 @@ export const markSchema = z.object({
   locationDetails: optionalString(),
   lat: optionalNumber(-90, 90),
   lng: optionalNumber(-180, 180),
+  gpsEncrypted: optionalString(),
   freeText: optionalString(),
   comments: optionalString(),
 });

@@ -9,7 +9,7 @@ export default function PrivacyPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Privacy policy</h1>
-        <p className="mt-1 text-sm text-muted">Last updated August 2026.</p>
+        <p className="mt-1 text-sm text-muted">Last updated October 2026.</p>
       </div>
 
       <section className={`${cardClass} flex flex-col gap-4 p-5 text-sm leading-relaxed`}>
@@ -40,7 +40,18 @@ export default function PrivacyPage() {
           <p className="text-muted">
             Marks and sessions can store precise GPS coordinates for fishing spots. This data can reveal real-world
             locations, including places you consider personal or private (a home launch point, a favorite spot).
-            It&apos;s visible only to your own account — other users cannot see your marks, sessions, or catches.
+            Other users cannot see your marks, sessions, or catches. You can optionally enable Private GPS for marks
+            in Account settings. When enabled, mark coordinates are encrypted in your browser with a key only you
+            hold, before they are sent to SpearLog. The database stores ciphertext, and the key is not stored by
+            SpearLog. Mark names and location labels are not encrypted. Session GPS coordinates are not covered by
+            this option.
+          </p>
+          <p className="mt-2 text-muted">
+            If you lose your Private GPS key, neither you nor SpearLog can recover encrypted mark coordinates. The
+            key is needed in the browser to view, import, or export those coordinates. While Private GPS is enabled,
+            automatic mark geotagging is unavailable. Like any web app, this protection depends on using a trusted
+            browser and device; it does not protect coordinates after you unlock and use them on your device, or
+            against compromised devices or malicious changes to the code served by the website.
           </p>
         </div>
 
