@@ -88,7 +88,7 @@ export function PrivateGpsSettings({ enabled, marks }: { enabled: boolean; marks
   }
 
   return (
-    <section className="rounded-xl border border-surface-border bg-surface p-5">
+    <section id="private-gps" className="rounded-xl border border-surface-border bg-surface p-5">
       <h2 className="text-sm font-semibold">Private GPS for marks</h2>
       {enabled ? (
         <div className="mt-2 flex flex-col gap-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { MarkRow } from "@/db/schema";
 import { MarksMapSection } from "@/components/marks-map-section";
 import { MarkExportButton } from "@/components/mark-export-button";
@@ -95,6 +96,20 @@ export function PrivateGpsMarksWorkspace({
 
   return (
     <>
+      {!privateGpsEnabled && (
+        <section className="flex flex-col gap-3 rounded-lg border border-accent/30 bg-accent-soft/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold">Keep exact mark coordinates private from SpearLog</h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted">
+              Set up Private GPS to encrypt mark coordinates in your browser before they are stored. Your key stays
+              with you; if you lose it, the coordinates cannot be recovered.
+            </p>
+          </div>
+          <Link href="/account#private-gps" className={button("primary", "shrink-0")}>
+            Set up Private GPS
+          </Link>
+        </section>
+      )}
       {privateGpsEnabled && (
         <div className="flex justify-end">
           <button
