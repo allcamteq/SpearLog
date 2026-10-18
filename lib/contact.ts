@@ -11,6 +11,6 @@
  * that need no login, so it will be scraped, and an alias can be redirected or
  * replaced without touching the policy text.
  */
-export const CONTACT_EMAIL = "contact@spearlog.app";
+export const CONTACT_EMAIL = "allcamteq@gmail.com";
 
 export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
