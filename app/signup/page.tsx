@@ -13,6 +13,11 @@ const FEATURE_HIGHLIGHTS = [
     description: "Easily organise all your fishing locations, with simple import and export options.",
   },
   {
+    title: "Keep Mark GPS Private",
+    description:
+      "Optionally encrypt precise mark coordinates in your browser. Your key is never stored by SpearLog; losing it means the coordinates cannot be recovered.",
+  },
+  {
     title: "Track Every Fishing Session",
     description:
       "Record each session alongside detailed tide, current and weather data automatically retrieved from trusted data sources.",
@@ -21,6 +26,10 @@ const FEATURE_HIGHLIGHTS = [
     title: "Identify Your Best Fishing Conditions",
     description:
       "Analyse your historical results to uncover trends and understand the conditions that produce your most successful sessions.",
+  },
+  {
+    title: "Plan Your Next Trip",
+    description: "Score a planned dive and get a recommended dive window based on the location and date.",
   },
   {
     title: "Build a Complete Fishing Logbook",
